@@ -71,7 +71,16 @@
     <input type="text" id="vorname" placeholder="Vorname"><br>
     <input type="text" id="nachname" placeholder="Nachname"><br>
     <input type="number" id="age" placeholder="Alter"><br>
-    <select id="country"></select><br>
+    <select id="country">
+      <option value="">Wähle dein Land</option>
+      <option value="Deutschland">Deutschland</option>
+      <option value="Österreich">Österreich</option>
+      <option value="Schweiz">Schweiz</option>
+      <option value="China">China</option>
+      <option value="USA">USA</option>
+      <option value="UK">UK</option>
+      <option value="Frankreich">Frankreich</option>
+    </select><br>
     <button onclick="register()" id="registerBtn">Herausforderung starten</button>
   </div>
 
@@ -151,8 +160,26 @@
       });
     }
 
-    // Rest of your game logic (registration, competition, language change, etc.)
-    // Call loadRankingsFromGitHub() on page load and updateRankingsOnGitHub() when updating
+    function register() {
+      const vorname = document.getElementById('vorname').value;
+      const nachname = document.getElementById('nachname').value;
+      const age = parseInt(document.getElementById('age').value);
+      const country = document.getElementById('country').value;
+      if (!vorname || !nachname || !age || !country || age <= 0) {
+        alert('Bitte alle Felder korrekt ausfüllen!');
+        return;
+      }
+      alert(`Willkommen ${vorname} ${nachname}!`);
+    }
+
+    function updateRankingTable(tableId, data) {
+      const tbody = document.getElementById(tableId).querySelector('tbody');
+      tbody.innerHTML = '';
+      data.sort((a, b) => a.time - b.time);
+      data.forEach(d => {
+        tbody.innerHTML += `<tr><td>${d.vorname}</td><td>${d.nachname}</td><td>${d.age}</td><td>${d.country}</td><td>${d.time}</td></tr>`;
+      });
+    }
 
     window.onload = loadRankingsFromGitHub;
   </script>
