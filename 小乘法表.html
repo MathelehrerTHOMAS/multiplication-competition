@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>Einmaleins Wettkampf</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f8ff;
+      text-align: center;
+      padding: 20px;
+    }
+    h1 {
+      color: #2c3e50;
+    }
+    .section {
+      background-color: #fff;
+      padding: 20px;
+      margin: 20px auto;
+      border-radius: 15px;
+      max-width: 600px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    input, select, button {
+      margin: 10px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      width: 80%;
+    }
+    table {
+      margin: 20px auto;
+      border-collapse: collapse;
+      width: 95%;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+    }
+    th {
+      background-color: #f9ca24;
+    }
+    .hidden {
+      display: none;
+    }
+    .feedback {
+      font-weight: bold;
+      margin: 10px;
+      height: 24px;
+    }
+    #languageSelector {
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Global Language Selector -->
+  <div id="languageSelector">
+    🌐 Sprache / 语言 / Language:
+    <select id="languageSelect" onchange="changeLanguage()">
+      <option value="de">Deutsch</option>
+      <option value="zh">中文</option>
+      <option value="en">English</option>
+    </select>
+  </div>
+
+  <h1 id="title">🎉 Einmaleins Wettkampf 🎉</h1>
+
+  <!-- Registration Section -->
+  <div class="section" id="registrationSection">
+    <h2 id="registerTitle">📝 Registrierung</h2>
+    <input type="text" id="vorname" placeholder="Vorname"><br>
+    <input type="text" id="nachname" placeholder="Nachname"><br>
+    <input type="number" id="age" placeholder="Alter"><br>
+    <select id="country"></select><br>
+    <button onclick="register()" id="registerBtn">Herausforderung starten</button>
+  </div>
+
+  <!-- Competition Section -->
+  <div class="section hidden" id="competitionSection">
+    <h2 id="competitionTitle">🚀 Starte den Einmaleins-Wettkampf!</h2>
+    <div id="question">Frage erscheint hier</div>
+    <input type="number" id="answer" placeholder="Deine Antwort" onkeydown="handleKey(event)">
+    <br>
+    <div class="feedback" id="feedback"></div>
+    <button onclick="cancelCompetition()" id="cancelBtn">❌ Herausforderung abbrechen</button>
+    <div id="timer">Zeit: 0 Sekunden</div>
+    <div id="progress">Richtig beantwortet: 0 / 20</div>
+  </div>
+
+  <!-- Rankings -->
+  <div class="section" id="smallTableRank">
+    <h2 id="smallRankTitle">🏆 Kleine Einmaleins Rangliste (1-10)</h2>
+    <table id="smallTable">
+      <thead>
+        <tr id="smallTableHead">
+          <th>Vorname</th><th>Nachname</th><th>Alter</th><th>Land</th><th>Zeit (Sekunden)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="section" id="bigTableRank">
+    <h2 id="bigRankTitle">🏆 Große Einmaleins Rangliste (1-20)</h2>
+    <table id="bigTable">
+      <thead>
+        <tr id="bigTableHead">
+          <th>Vorname</th><th>Nachname</th><th>Alter</th><th>Land</th><th>Zeit (Sekunden)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script>
+    let user = {};
+    let startTime;
+    let timerInterval;
+    let correctAnswers = 0;
+    let currentQuestion = {};
+    let currentLanguage = 'de';
+
+    const smallTableRankings = [];
+    const bigTableRankings = [];
+
+    const translations = {
+      de: {
+        title: "🎉 Einmaleins Wettkampf 🎉",
+        registerTitle: "📝 Registrierung",
+        competitionTitle: "🚀 Starte den Einmaleins-Wettkampf!",
+        cancel: "❌ Herausforderung abbrechen",
+        registerBtn: "Herausforderung starten",
+        correct: "✅ Richtig!",
+        wrong: "❌ Falsch! Richtige Antwort: ",
+        finish: "🎉 Glückwunsch! Du hast 20 richtige Antworten in ",
+        timer: "Zeit: ",
+        progress: "Richtig beantwortet: ",
+        countryPlaceholder: "Wähle dein Land",
+        smallRank: "🏆 Kleine Einmaleins Rangliste (1-10)",
+        bigRank: "🏆 Große Einmaleins Rangliste (1-20)",
+        tableHead: ["Vorname", "Nachname", "Alter", "Land", "Zeit (Sekunden)"]
+      },
+      zh: {
+        title: "🎉 乘法表竞赛 🎉",
+        registerTitle: "📝 注册",
+        competitionTitle: "🚀 开始乘法挑战！",
+        cancel: "❌ 取消挑战",
+        registerBtn: "开始挑战",
+        correct: "✅ 正确！",
+        wrong: "❌ 错误！正确答案是: ",
+        finish: "🎉 恭喜！你在 ",
+        timer: "时间: ",
+        progress: "已答对: ",
+        countryPlaceholder: "选择国家",
+        smallRank: "🏆 小乘法表排行榜 (1-10)",
+        bigRank: "🏆 大乘法表排行榜 (1-20)",
+        tableHead: ["名字", "姓氏", "年龄", "国家", "用时(秒)"]
+      },
+      en: {
+        title: "🎉 Multiplication Competition 🎉",
+        registerTitle: "📝 Registration",
+        competitionTitle: "🚀 Start the Multiplication Challenge!",
+        cancel: "❌ Cancel Challenge",
+        registerBtn: "Start Challenge",
+        correct: "✅ Correct!",
+        wrong: "❌ Wrong! Correct answer: ",
+        finish: "🎉 Congrats! You got 20 correct answers in ",
+        timer: "Time: ",
+        progress: "Correct answered: ",
+        countryPlaceholder: "Select Country",
+        smallRank: "🏆 Small Times Table Ranking (1-10)",
+        bigRank: "🏆 Big Times Table Ranking (1-20)",
+        tableHead: ["First Name", "Last Name", "Age", "Country", "Time (Seconds)"]
+      }
+    };
+
+    const countries = [
+      "Deutschland", "Österreich", "China", "Hongkong/中国", "Macau/中国", "Taiwan/中国",
+      "USA", "Frankreich", "Italien", "Kanada", "Japan", "Brasilien", "UK", "Mexiko", "Russland", "Indien", "Australien", "Spanien", "Südafrika"
+    ];
+
+    function changeLanguage() {
+      currentLanguage = document.getElementById('languageSelect').value;
+      const t = translations[currentLanguage];
+      document.getElementById('title').innerText = t.title;
+      document.getElementById('registerTitle').innerText = t.registerTitle;
+      document.getElementById('competitionTitle').innerText = t.competitionTitle;
+      document.getElementById('cancelBtn').innerText = t.cancel;
+      document.getElementById('registerBtn').innerText = t.registerBtn;
+      document.getElementById('smallRankTitle').innerText = t.smallRank;
+      document.getElementById('bigRankTitle').innerText = t.bigRank;
+
+      // Update table headers
+      const smallHead = document.getElementById('smallTableHead');
+      const bigHead = document.getElementById('bigTableHead');
+      let headerHTML = '';
+      t.tableHead.forEach(h => headerHTML += `<th>${h}</th>`);
+      smallHead.innerHTML = headerHTML;
+      bigHead.innerHTML = headerHTML;
+
+      // Update country select if still visible
+      const countrySelect = document.getElementById('country');
+      if (!document.getElementById('registrationSection').classList.contains('hidden')) {
+        countrySelect.innerHTML = `<option value="">${t.countryPlaceholder}</option>`;
+        countries.forEach(c => {
+          countrySelect.innerHTML += `<option value="${c}">${c}</option>`;
+        });
+      }
+    }
+
+    function register() {
+      const vorname = document.getElementById('vorname').value;
+      const nachname = document.getElementById('nachname').value;
+      const age = parseInt(document.getElementById('age').value);
+      const country = document.getElementById('country').value;
+      if (!vorname || !nachname || !age || !country || age <= 0) {
+        alert('请填写所有信息 / Bitte alle Felder ausfüllen / Fill all fields!');
+        return;
+      }
+      user = { vorname, nachname, age, country };
+      correctAnswers = 0;
+      document.getElementById('registrationSection').classList.add('hidden');
+      document.getElementById('competitionSection').classList.remove('hidden');
+      startCompetition();
+    }
+
+    function startCompetition() {
+      const t = translations[currentLanguage];
+      document.getElementById('progress').innerText = `${t.progress} 0 / 20`;
+      document.getElementById('timer').innerText = `${t.timer}0`;
+      document.getElementById('feedback').innerText = '';
+      startTime = new Date();
+      timerInterval = setInterval(updateTimer, 1000);
+      showQuestion();
+    }
+
+    function updateTimer() {
+      const t = translations[currentLanguage];
+      const now = new Date();
+      const elapsed = Math.floor((now - startTime) / 1000);
+      document.getElementById('timer').innerText = `${t.timer}${elapsed}`;
+    }
+
+    function showQuestion() {
+      const maxNumber = user.age <= 10 ? 10 : 20;
+      let a = Math.floor(Math.random() * maxNumber) + 1;
+      let b = Math.floor(Math.random() * maxNumber) + 1;
+      currentQuestion = { a, b, result: a * b };
+      document.getElementById('question').innerText = `${a} × ${b} = ?`;
+      document.getElementById('answer').value = '';
+      document.getElementById('answer').focus();
+    }
+
+    function submitAnswer() {
+      const answer = parseInt(document.getElementById('answer').value);
+      const t = translations[currentLanguage];
+      const feedback = document.getElementById('feedback');
+      if (answer === currentQuestion.result) {
+        correctAnswers++;
+        feedback.innerText = t.correct;
+        feedback.style.color = 'green';
+      } else {
+        feedback.innerText = t.wrong + currentQuestion.result;
+        feedback.style.color = 'red';
+      }
+      document.getElementById('progress').innerText = `${t.progress}${correctAnswers} / 20`;
+
+      if (correctAnswers >= 20) {
+        setTimeout(finishCompetition, 1000);
+      } else {
+        setTimeout(() => {
+          feedback.innerText = '';
+          showQuestion();
+        }, 1000);
+      }
+    }
+
+    function handleKey(event) {
+      if (event.key === 'Enter') {
+        submitAnswer();
+      }
+    }
+
+    function cancelCompetition() {
+      clearInterval(timerInterval);
+      document.getElementById('competitionSection').classList.add('hidden');
+      document.getElementById('registrationSection').classList.remove('hidden');
+    }
+
+    function finishCompetition() {
+      clearInterval(timerInterval);
+      const t = translations[currentLanguage];
+      const endTime = new Date();
+      const timeTaken = Math.floor((endTime - startTime) / 1000);
+      alert(`${t.finish}${timeTaken}秒!`);
+
+      const result = { vorname: user.vorname, nachname: user.nachname, age: user.age, country: user.country, time: timeTaken };
+      if (user.age <= 10) {
+        smallTableRankings.push(result);
+        updateRankingTable('smallTable', smallTableRankings);
+      } else {
+        bigTableRankings.push(result);
+        updateRankingTable('bigTable', bigTableRankings);
+      }
+      document.getElementById('competitionSection').classList.add('hidden');
+      document.getElementById('registrationSection').classList.remove('hidden');
+    }
+
+    function updateRankingTable(tableId, data) {
+      const tbody = document.getElementById(tableId).querySelector('tbody');
+      tbody.innerHTML = '';
+      data.sort((a, b) => a.time - b.time);
+      data.forEach(d => {
+        tbody.innerHTML += `<tr><td>${d.vorname}</td><td>${d.nachname}</td><td>${d.age}</td><td>${d.country}</td><td>${d.time}</td></tr>`;
+      });
+    }
+
+    // Initialize language at start
+    changeLanguage();
+  </script>
+
+</body>
+</html>
