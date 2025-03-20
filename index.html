@@ -55,7 +55,7 @@
 </head>
 <body>
 
-  <!-- Global Language Selector -->
+  <!-- Language Selector -->
   <div id="languageSelector">
     🌐 Sprache / 语言 / Language:
     <select id="languageSelect" onchange="changeLanguage()">
@@ -122,8 +122,8 @@
     let currentQuestion = {};
     let currentLanguage = 'de';
 
-    const smallTableRankings = [];
-    const bigTableRankings = [];
+    let smallTableRankings = [];
+    let bigTableRankings = [];
 
     const translations = {
       de: {
@@ -181,6 +181,20 @@
       "USA", "Frankreich", "Italien", "Kanada", "Japan", "Brasilien", "UK", "Mexiko", "Russland", "Indien", "Australien", "Spanien", "Südafrika"
     ];
 
+    function loadFromLocalStorage() {
+      const small = localStorage.getItem('smallRankings');
+      const big = localStorage.getItem('bigRankings');
+      if (small) smallTableRankings = JSON.parse(small);
+      if (big) bigTableRankings = JSON.parse(big);
+      updateRankingTable('smallTable', smallTableRankings);
+      updateRankingTable('bigTable', bigTableRankings);
+    }
+
+    function saveToLocalStorage() {
+      localStorage.setItem('smallRankings', JSON.stringify(smallTableRankings));
+      localStorage.setItem('bigRankings', JSON.stringify(bigTableRankings));
+    }
+
     function changeLanguage() {
       currentLanguage = document.getElementById('languageSelect').value;
       const t = translations[currentLanguage];
@@ -192,7 +206,6 @@
       document.getElementById('smallRankTitle').innerText = t.smallRank;
       document.getElementById('bigRankTitle').innerText = t.bigRank;
 
-      // Update table headers
       const smallHead = document.getElementById('smallTableHead');
       const bigHead = document.getElementById('bigTableHead');
       let headerHTML = '';
@@ -200,14 +213,12 @@
       smallHead.innerHTML = headerHTML;
       bigHead.innerHTML = headerHTML;
 
-      // Update country select if still visible
       const countrySelect = document.getElementById('country');
-      if (!document.getElementById('registrationSection').classList.contains('hidden')) {
-        countrySelect.innerHTML = `<option value="">${t.countryPlaceholder}</option>`;
-        countries.forEach(c => {
-          countrySelect.innerHTML += `<option value="${c}">${c}</option>`;
-        });
-      }
+      if (!document.getElementById('competitionSection').classList.contains('hidden')) return;
+      countrySelect.innerHTML = `<option value="">${t.countryPlaceholder}</option>`;
+      countries.forEach(c => {
+        countrySelect.innerHTML += `<option value="${c}">${c}</option>`;
+      });
     }
 
     function register() {
@@ -304,6 +315,7 @@
         bigTableRankings.push(result);
         updateRankingTable('bigTable', bigTableRankings);
       }
+      saveToLocalStorage();
       document.getElementById('competitionSection').classList.add('hidden');
       document.getElementById('registrationSection').classList.remove('hidden');
     }
@@ -317,9 +329,11 @@
       });
     }
 
-    // Initialize language at start
+    // Initialize
+    loadFromLocalStorage();
     changeLanguage();
   </script>
 
 </body>
 </html>
+
