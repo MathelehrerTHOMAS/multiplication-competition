@@ -288,41 +288,56 @@ function refreshAllStats() {
     refreshAllStats();
   }
 
-  function checkAnswer() {
-if (correct >= 20) return; // 防止多余答题
-    let t = translations[currentLang];
-    let [a, , b] = question.split(' ');
-    a = parseInt(a);
-    b = parseInt(b);
-    let result = a * b;
-    let userAnswer = parseInt(document.getElementById('answer').value);
-    let feedback = document.getElementById('feedback');
-    if (userAnswer === result) {
-      feedback.innerText = t.correctTip;
-      feedback.className = 'correct';
-      correct++;
-      document.getElementById('correct').innerText = correct;
-      document.getElementById('answer').value = '';
-      if (correct === 20) finishTraining();
-      else generateQuestion();
+ function checkAnswer() {
+  if (correct >= 20) return; // ✅ 防止继续答题
+
+  let t = translations[currentLang];
+  let [a, , b] = question.split(' ');
+  a = parseInt(a);
+  b = parseInt(b);
+  let result = a * b;
+  let userAnswer = parseInt(document.getElementById('answer').value);
+  let feedback = document.getElementById('feedback');
+
+  if (userAnswer === result) {
+    feedback.innerText = t.correctTip;
+    feedback.className = 'correct';
+    correct++;
+    document.getElementById('correct').innerText = correct;
+    document.getElementById('answer').value = '';
+
+    if (correct === 20) {
+      finishTraining(); // ✅ 立即结束
     } else {
-      feedback.innerText = t.wrongTip;
-      feedback.className = 'wrong';
-      document.getElementById('answer').value = '';
+      generateQuestion();
     }
+  } else {
+    feedback.innerText = t.wrongTip;
+    feedback.className = 'wrong';
+    document.getElementById('answer').value = '';
   }
+}
 
   function finishTraining() {
-    clearInterval(interval);
-    interval = null;
-    let t = translations[currentLang];
-    let name = document.getElementById('name').value.trim().toLowerCase();
-    saveStats(name, level);
+  clearInterval(interval);
+  interval = null;
+
+  let t = translations[currentLang];
+  let name = document.getElementById('name').value.trim().toLowerCase();
+
+  // ✅ 禁用按钮
+  document.getElementById('restartBtn').style.display = 'inline-block';
+  document.getElementById('submitBtn').disabled = true;
+  document.getElementById('answer').disabled = true;
+
+  // ✅ 保存成绩
+  saveStats(name, level);
+
+  // ✅ 弹出提示
+  setTimeout(() => {
     alert(`${t.finish} ${timer}${t.seconds}`);
-    document.getElementById('restartBtn').style.display = 'inline-block';
-    document.getElementById('submitBtn').disabled = true;
-    document.getElementById('answer').disabled = true;
-  }
+  }, 200); // 延迟一点以确保 UI 更新
+}
 
   function restartTraining() { startTraining(); }
   function changeLanguage() { applyLanguage(); }
