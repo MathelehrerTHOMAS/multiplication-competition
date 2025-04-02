@@ -1,188 +1,332 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+
   <meta charset="UTF-8" />
-  <title>Einmaleins Wettkampf</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>心算日日练</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background-color: #f0f8ff;
+      font-family: Comic Sans MS, Arial, sans-serif;
+      max-width: 700px;
+      margin: auto;
+      padding: 20px;
       text-align: center;
-      padding: 20px;
+      background-color: #f0f8ff;
+      color: #333;
     }
-    h1 {
-      color: #2c3e50;
+    h2, h3, h4 {
+      color: #2e8b57;
     }
-    .section {
-      background-color: #fff;
-      padding: 20px;
-      margin: 20px auto;
-      border-radius: 15px;
-      max-width: 600px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    #schoolName {
+      font-weight: bold;
+      margin-bottom: 15px;
+      font-size: 1.2em;
+      color: #8b0000;
     }
     input, select, button {
       margin: 10px;
-      padding: 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      width: 80%;
+      padding: 12px;
+      border-radius: 12px;
+      border: 2px solid #aaa;
+      font-size: 1em;
     }
-    table {
-      margin: 20px auto;
-      border-collapse: collapse;
-      width: 95%;
+    button {
+      background-color: #2e8b57;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.1s;
     }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 8px;
+    button:hover {
+      background-color: #228b22;
+      transform: scale(1.05);
     }
-    th {
-      background-color: #f9ca24;
+    .question {
+      font-size: 2em;
+      margin: 20px 0;
+      color: #000080;
     }
-    .hidden {
-      display: none;
+    .stats {
+      margin-top: 30px;
+      text-align: left;
+      background-color: #fff;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
     }
-    .feedback {
+    #feedback {
+      margin-top: 10px;
+      font-size: 1.4em;
+      height: 2em;
       font-weight: bold;
-      margin: 10px;
-      height: 24px;
     }
-    #languageSelector {
-      margin-bottom: 20px;
+    #feedback.correct {
+      color: green;
+    }
+    #feedback.wrong {
+      color: red;
+    }
+    #training {
+      margin-top: 20px;
+      background-color: #fff;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
+    }
+    ul {
+      padding-left: 20px;
     }
   </style>
 </head>
 <body>
 
-  <div id="languageSelector">
-    🌐 Sprache / 语言 / Language:
-    <select id="languageSelect" onchange="changeLanguage()">
-      <option value="de">Deutsch</option>
-      <option value="zh">中文</option>
-      <option value="en">English</option>
-    </select>
+  <div id="schoolName">汉华中文学校奥林匹克数学兴趣班</div>
+  <h2 id="title">心算日日练</h2>
+
+  <div>
+    <label id="langLabel">语言: 
+      <select id="language" onchange="changeLanguage()">
+        <option value="zh">中文</option>
+        <option value="de" selected>Deutsch</option>
+        <option value="en">English</option>
+      </select>
+    </label><br />
   </div>
 
-  <h1 id="title">🎉 Einmaleins Wettkampf 🎉</h1>
-
-  <div class="section" id="registrationSection">
-    <h2 id="registerTitle">📝 Registrierung</h2>
-    <input type="text" id="vorname" placeholder="Vorname"><br>
-    <input type="text" id="nachname" placeholder="Nachname"><br>
-    <input type="number" id="age" placeholder="Alter"><br>
-    <select id="country">
-      <option value="">Wähle dein Land</option>
-      <option value="Deutschland">Deutschland</option>
-      <option value="Österreich">Österreich</option>
-      <option value="Schweiz">Schweiz</option>
-      <option value="China">China</option>
-      <option value="USA">USA</option>
-      <option value="UK">UK</option>
-      <option value="Frankreich">Frankreich</option>
-    </select><br>
-    <button onclick="register()" id="registerBtn">Herausforderung starten</button>
+  <div>
+    <label id="nameLabel">姓名: <input id="name" type="text" oninput="refreshAllStats()" /></label><br />
+    <label id="levelLabel">等级: 
+      <select id="level"></select>
+    </label><br />
+    <button id="startBtn" onclick="startTraining()">开始训练/重新开始</button>
   </div>
 
-  <div class="section hidden" id="competitionSection">
-    <h2 id="competitionTitle">🚀 Starte den Einmaleins-Wettkampf!</h2>
-    <div id="question">Frage erscheint hier</div>
-    <input type="number" id="answer" placeholder="Deine Antwort" onkeydown="handleKey(event)">
-    <br>
-    <div class="feedback" id="feedback"></div>
-    <button onclick="cancelCompetition()" id="cancelBtn">❌ Herausforderung abbrechen</button>
-    <div id="timer">Zeit: 0 Sekunden</div>
-    <div id="progress">Richtig beantwortet: 0 / 20</div>
+  <div id="training" style="display:none;">
+    <div class="question" id="question"></div>
+    <input id="answer" type="number" onkeydown="if(event.key==='Enter')checkAnswer();" placeholder="输入答案" />
+    <br />
+    <button id="submitBtn" onclick="checkAnswer()">提交</button>
+    <div id="correctLabel">已答对: <span id="correct">0</span>/20</div>
+    <div id="timerLabel">计时: <span id="timer">0</span></div>
+    <div id="feedback"></div>
+    <button id="restartBtn" style="display:none;" onclick="restartTraining()">开始训练/重新开始</button>
   </div>
 
-  <div class="section" id="smallTableRank">
-    <h2 id="smallRankTitle">🏆 Kleine Einmaleins Rangliste (1-10)</h2>
-    <table id="smallTable">
-      <thead>
-        <tr id="smallTableHead">
-          <th>Vorname</th><th>Nachname</th><th>Alter</th><th>Land</th><th>Zeit (Sekunden)</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+  <div class="stats">
+    <h3 id="statTitle">过去7天最好成绩</h3>
+    <div id="allStats">
+      <h4 id="stat1Title">1级</h4>
+      <ul id="stats1"></ul>
+      <h4 id="stat2Title">2级</h4>
+      <ul id="stats2"></ul>
+      <h4 id="stat3Title">3级</h4>
+      <ul id="stats3"></ul>
+    </div>
   </div>
 
-  <div class="section" id="bigTableRank">
-    <h2 id="bigRankTitle">🏆 Große Einmaleins Rangliste (1-20)</h2>
-    <table id="bigTable">
-      <thead>
-        <tr id="bigTableHead">
-          <th>Vorname</th><th>Nachname</th><th>Alter</th><th>Land</th><th>Zeit (Sekunden)</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
+<script>
+  let correct = 0, timer = 0, interval = null, startTime = null, question = '', level = 1;
+  let today = new Date().toLocaleDateString();
+  let currentLang = 'de';
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/js-base64/3.7.2/base64.min.js"></script>
-  <script>
-    const githubUsername = 'MathelehrerTHOMAS';
-    const githubRepo = 'multiplication-competition';
-    const githubToken = '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';
-    const jsonFilePath = 'rankings.json';
-    const apiUrl = `https://api.github.com/repos/${githubUsername}/${githubRepo}/contents/${jsonFilePath}`;
+  const allowedNames = [
+    'lingyi', 'jinxi', 'aizhen', 'oscar', 'yuanyuan', 'tiantian', 'luca', 'yichen', 'kaixuan', 'ziying', 'bolun', 'xingyu', 'suye', 'bennuo', 'bayue', 'zhengqi', 'hansen', 'jinghan', 'andi', 'lena', 'yangyang', 'benny', 'sheng',
+    'lingyi-papa', 'jinxi-papa', 'aizhen-papa', 'oscar-papa', 'yuanyuan-papa', 'tiantian-papa', 'luca-papa', 'yichen-papa', 'kaixuan-papa', 'ziying-papa', 'bolun-papa', 'xingyu-papa', 'suye-papa', 'bennuo-papa', 'bayue-papa', 'zhengqi-papa', 'hansen-papa', 'jinghan-papa', 'andi-papa', 'lena-papa', 'yangyang-papa', 'benny-papa',
+    'lingyi-mama', 'jinxi-mama', 'aizhen-mama', 'oscar-mama', 'yuanyuan-mama', 'tiantian-mama', 'luca-mama', 'yichen-mama', 'kaixuan-mama', 'ziying-mama', 'bolun-mama', 'xingyu-mama', 'suye-mama', 'bennuo-mama', 'bayue-mama', 'zhengqi-mama', 'hansen-mama', 'jinghan-mama', 'andi-mama', 'lena-mama', 'yangyang-mama', 'benny-mama', 'lyndon', 'lyndon-papa', 'lyndon-mama', 'luke', 'luke-papa', 'luke-mama'
+  ];
 
-    let smallTableRankings = [];
-    let bigTableRankings = [];
-
-    async function loadRankingsFromGitHub() {
-      const res = await fetch(`https://raw.githubusercontent.com/${githubUsername}/${githubRepo}/main/${jsonFilePath}`);
-      const data = await res.json();
-      smallTableRankings = data.small;
-      bigTableRankings = data.big;
-      updateRankingTable('smallTable', smallTableRankings);
-      updateRankingTable('bigTable', bigTableRankings);
+  const translations = {
+    zh: { title: '心算日日练', lang: '语言', name: '姓名', level: '等级',
+      levels: ['1级 (小乘法表 1-9)', '2级 (大乘法表 10-20)', '3级 (100以内相乘)'],
+      levelTitles: ['1级', '2级', '3级'],
+      start: '开始训练/重新开始', submit: '提交', correct: '已答对', timer: '计时', stat: '过去7天最好成绩',
+      correctTip: '✅ 正确!', wrongTip: '❌ 错误! 再试试看', finish: '完成20题，用时', times: '次', seconds: '秒',
+      maxToday: '今天最多训练5次', enterInfo: '请输入有效姓名'
+    },
+    de: { title: 'Mathe Training', lang: 'Sprache', name: 'Name', level: 'Stufe',
+      levels: ['Stufe 1 (kleines Einmaleins 1-9)', 'Stufe 2 (großes Einmaleins 10-20)', 'Stufe 3 (Multiplikation bis 100)'],
+      levelTitles: ['Stufe 1', 'Stufe 2', 'Stufe 3'],
+      start: 'Starten/Neustart', submit: 'Bestätigen', correct: 'Richtig', timer: 'Zeit', stat: 'Beste Ergebnisse der letzten 7 Tage',
+      correctTip: '✅ Richtig!', wrongTip: '❌ Falsch! Nochmals versuchen', finish: '20 Aufgaben geschafft, Zeit', times: 'mal', seconds: 'Sekunden',
+      maxToday: 'Heute maximal 5-mal trainieren!', enterInfo: 'Bitte gültigen Namen eingeben'
+    },
+    en: { title: 'Daily Mental Math', lang: 'Language', name: 'Name', level: 'Level',
+      levels: ['Level 1 (Small multiplication table 1-9)', 'Level 2 (Large multiplication table 10-20)', 'Level 3 (Multiply up to 100)'],
+      levelTitles: ['Level 1', 'Level 2', 'Level 3'],
+      start: 'Start/Restart', submit: 'Submit', correct: 'Correct', timer: 'Time', stat: 'Best scores in past 7 days',
+      correctTip: '✅ Correct!', wrongTip: '❌ Wrong! Try again', finish: 'Completed 20 questions in', times: 'times', seconds: 'seconds',
+      maxToday: 'Max 5 trainings per day', enterInfo: 'Please enter a valid name'
     }
+  };
 
-    async function updateRankingsOnGitHub() {
-      const getRes = await fetch(apiUrl, { headers: { Authorization: `token ${githubToken}` } });
-      const fileData = await getRes.json();
-      const sha = fileData.sha;
+  function applyLanguage() {
+    currentLang = document.getElementById('language').value;
+    let t = translations[currentLang];
+    document.getElementById('title').innerText = t.title;
+    document.getElementById('langLabel').childNodes[0].nodeValue = t.lang + ': ';
+    document.getElementById('nameLabel').childNodes[0].nodeValue = t.name + ': ';
+    document.getElementById('levelLabel').childNodes[0].nodeValue = t.level + ': ';
+    let levelSelect = document.getElementById('level');
+    levelSelect.innerHTML = '';
+    t.levels.forEach((text, idx) => {
+      let option = document.createElement('option');
+      option.value = idx + 1;
+      option.text = text;
+      levelSelect.add(option);
+    });
+    document.getElementById('startBtn').innerText = t.start;
+    document.getElementById('submitBtn').innerText = t.submit;
+    document.getElementById('correctLabel').childNodes[0].nodeValue = t.correct + ': ';
+    document.getElementById('timerLabel').childNodes[0].nodeValue = t.timer + ': ';
+    document.getElementById('statTitle').innerText = t.stat;
+    document.getElementById('restartBtn').innerText = t.start;
+    document.getElementById('stat1Title').innerText = t.levelTitles[0];
+    document.getElementById('stat2Title').innerText = t.levelTitles[1];
+    document.getElementById('stat3Title').innerText = t.levelTitles[2];
+    refreshAllStats();
+    document.getElementById('timer').nextSibling.nodeValue = t.seconds;
+  }
 
-      const newContent = Base64.encode(JSON.stringify({ small: smallTableRankings, big: bigTableRankings }, null, 2));
+const firebaseConfig = {
 
-      await fetch(apiUrl, {
-        method: 'PUT',
-        headers: {
-          Authorization: `token ${githubToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          message: 'Update rankings',
-          content: newContent,
-          sha: sha
-        })
+  apiKey: "AIzaSyA_o9sYsTjcmja9SdZ3yyGOthcZVjgOauQ",
+
+  authDomain: "mentalmathapp-b6390.firebaseapp.com",
+
+  projectId: "mentalmathapp-b6390",
+
+  storageBucket: "mentalmathapp-b6390.firebasestorage.app",
+
+  messagingSenderId: "833411167917",
+
+  appId: "1:833411167917:web:a54776b33986d4123ef824"
+
+};
+
+
+// Initialize Firebase
+
+firebase.initializeApp(firebaseConfig);  // ✅ 兼容版用这个
+const db = firebase.database();         // ✅ 不用 firebase.database() 报错
+
+function saveStats(name, level) {
+  name = name.toLowerCase();
+  let path = `stats/${name}/level${level}/${today}`;
+  let ref = db.ref(path);
+  ref.once('value', snapshot => {
+    let data = snapshot.val() || { best: Infinity, times: 0 };
+    data.times += 1;
+    if (timer < data.best) data.best = timer;
+    ref.set(data);
+    refreshAllStats();
+  });
+}
+
+
+function refreshAllStats() {
+  let name = document.getElementById('name').value.trim().toLowerCase();
+  for (let lvl = 1; lvl <= 3; lvl++) {
+    let stats = document.getElementById(`stats${lvl}`);
+    stats.innerHTML = '';
+    let t = translations[currentLang];
+    let path = `stats/${name}/level${lvl}`;
+    db.ref(path).once('value', snapshot => {
+      let data = snapshot.val() || {};
+      let entries = Object.entries(data).sort().slice(-7); // 最近7天
+      entries.forEach(([date, d]) => {
+        stats.innerHTML += `<li>${date}: ${d.best}${t.seconds} (${d.times}${t.times})</li>`;
       });
+    });
+  }
+}
+
+  function generateQuestion() {
+    let a, b;
+    if (level === 1) {
+      a = Math.floor(Math.random() * 9) + 1;
+      b = Math.floor(Math.random() * 9) + 1;
+    } else if (level === 2) {
+      a = Math.floor(Math.random() * 11) + 10;
+      b = Math.floor(Math.random() * 11) + 10;
+    } else if (level === 3) {
+      a = Math.floor(Math.random() * 100) + 1;
+      b = Math.floor(Math.random() * 100) + 1;
     }
+    question = `${a} * ${b}`;
+    document.getElementById('question').innerText = question;
+  }
 
-    function register() {
-      const vorname = document.getElementById('vorname').value;
-      const nachname = document.getElementById('nachname').value;
-      const age = parseInt(document.getElementById('age').value);
-      const country = document.getElementById('country').value;
-      if (!vorname || !nachname || !age || !country || age <= 0) {
-        alert('Bitte alle Felder korrekt ausfüllen!');
-        return;
-      }
-      alert(`Willkommen ${vorname} ${nachname}!`);
+  function startTraining() {
+    let t = translations[currentLang];
+    let rawName = document.getElementById('name').value.trim();
+    let name = rawName.toLowerCase(); // ✅ name normalized
+    if (!allowedNames.includes(name)) {
+      alert(t.enterInfo);
+      return;
     }
+    level = parseInt(document.getElementById('level').value);
+    correct = 0;
+    timer = 0;
+    document.getElementById('correct').innerText = correct;
+    document.getElementById('training').style.display = 'block';
+    document.getElementById('feedback').innerText = '';
+    document.getElementById('feedback').className = '';
+    document.getElementById('answer').value = '';
+    document.getElementById('submitBtn').disabled = false;
+    document.getElementById('answer').disabled = false;
+    document.getElementById('restartBtn').style.display = 'none';
+    startTime = Date.now();
+    clearInterval(interval);
+    interval = setInterval(() => {
+      timer = Math.floor((Date.now() - startTime) / 1000);
+      document.getElementById('timer').innerText = timer;
+      document.getElementById('timer').nextSibling.nodeValue = t.seconds;
+    }, 1000);
+    generateQuestion();
+    refreshAllStats();
+  }
 
-    function updateRankingTable(tableId, data) {
-      const tbody = document.getElementById(tableId).querySelector('tbody');
-      tbody.innerHTML = '';
-      data.sort((a, b) => a.time - b.time);
-      data.forEach(d => {
-        tbody.innerHTML += `<tr><td>${d.vorname}</td><td>${d.nachname}</td><td>${d.age}</td><td>${d.country}</td><td>${d.time}</td></tr>`;
-      });
+  function checkAnswer() {
+    let t = translations[currentLang];
+    let [a, , b] = question.split(' ');
+    a = parseInt(a);
+    b = parseInt(b);
+    let result = a * b;
+    let userAnswer = parseInt(document.getElementById('answer').value);
+    let feedback = document.getElementById('feedback');
+    if (userAnswer === result) {
+      feedback.innerText = t.correctTip;
+      feedback.className = 'correct';
+      correct++;
+      document.getElementById('correct').innerText = correct;
+      document.getElementById('answer').value = '';
+      if (correct === 20) finishTraining();
+      else generateQuestion();
+    } else {
+      feedback.innerText = t.wrongTip;
+      feedback.className = 'wrong';
+      document.getElementById('answer').value = '';
     }
+  }
 
-    window.onload = loadRankingsFromGitHub;
-  </script>
+  function finishTraining() {
+    clearInterval(interval);
+    interval = null;
+    let t = translations[currentLang];
+    let name = document.getElementById('name').value.trim().toLowerCase();
+    saveStats(name, level);
+    alert(`${t.finish} ${timer}${t.seconds}`);
+    document.getElementById('restartBtn').style.display = 'inline-block';
+    document.getElementById('submitBtn').disabled = true;
+    document.getElementById('answer').disabled = true;
+  }
 
+  function restartTraining() { startTraining(); }
+  function changeLanguage() { applyLanguage(); }
+
+  applyLanguage();
+</script>
 </body>
 </html>
