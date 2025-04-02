@@ -215,14 +215,23 @@ function saveStats(name, level) {
   name = name.toLowerCase();
   let path = `stats/${name}/level${level}/${today}`;
   let ref = db.ref(path);
-  ref.once('value', snapshot => {
-    let data = snapshot.val() || { best: Infinity, times: 0 };
-    data.times += 1;
-    if (timer < data.best) data.best = timer;
-    ref.set(data);
-    refreshAllStats();
-  });
+
+  ref.once('value')
+    .then(snapshot => {
+      let data = snapshot.val() || { best: Infinity, times: 0 };
+      data.times += 1;
+      if (timer < data.best) data.best = timer;
+      return ref.set(data); // 👈 保存数据
+    })
+    .then(() => {
+      console.log('✅ 成绩已保存，正在刷新历史记录...');
+      refreshAllStats(); // 👈 保存成功后刷新
+    })
+    .catch(err => {
+      console.error('❌ 保存成绩失败:', err);
+    });
 }
+
 
 
 function refreshAllStats() {
